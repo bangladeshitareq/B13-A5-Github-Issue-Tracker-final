@@ -1,147 +1,138 @@
-let masterData = [];
+let allIssuesData = [];
 
-// Login with Custom Modal logic
-function startLogin() {
-  const userValue = document.getElementById("input-user").value;
-  const passValue = document.getElementById("input-pass").value;
+// Login with custom success modal
+const handleLogin = () => {
+  const user = document.getElementById("user-name").value;
+  const pass = document.getElementById("user-pass").value;
 
-  if (userValue === "admin" && passValue === "admin123") {
-    // Show success modal instead of native alert
+  if (user === "admin" && pass === "admin123") {
     document.getElementById("success_modal").showModal();
   } else {
-    alert("Invalid credentials. Try admin / admin123");
+    alert("Invalid Username or Password");
   }
-}
+};
 
-// Handle Modal Continue button
-function closeSuccessModal() {
+// Redirect to dashboard after modal confirm
+const goToDashboard = () => {
   document.getElementById("success_modal").close();
-  document.getElementById("login-section").classList.add("hidden");
-  document.getElementById("main-dashboard").classList.remove("hidden");
-  fetchIssues();
-}
+  document.getElementById("login-container").classList.add("hidden");
+  document.getElementById("dashboard-content").classList.remove("hidden");
+  loadIssuesFromServer();
+};
 
-// Get issues from API
-async function fetchIssues() {
-  showLoader(true);
+// API Call
+async function loadIssuesFromServer() {
+  toggleSpinner(true);
   try {
-    const response = await fetch(
+    const res = await fetch(
       "https://phi-lab-server.vercel.app/api/v1/lab/issues",
     );
-    const result = await response.json();
-    masterData = result.data;
-    renderData(masterData);
-  } catch (err) {
-    console.error("API Error:", err);
+    const data = await res.json();
+    allIssuesData = data.data;
+    displayIssues(allIssuesData);
+  } catch (e) {
+    console.error(e);
   }
-  showLoader(false);
+  toggleSpinner(false);
 }
 
-// Display Issues on UI with Highlighted Labels
-function renderData(dataList) {
-  const container = document.getElementById("cards-list");
+// Rendering UI with Label Highlight & Correct Data Mapping
+function displayIssues(issues) {
+  const container = document.getElementById("card-container");
   container.innerHTML = "";
 
-  // Stats Bar Update
-  document.getElementById("issue-total").innerText =
-    `${dataList.length} Issues Found`;
-  document.getElementById("open-count").innerText = masterData.filter(
+  // Stats
+  document.getElementById("total-text").innerText =
+    `${issues.length} Issues Found`;
+  document.getElementById("count-open").innerText = allIssuesData.filter(
     (i) => i.status === "open",
   ).length;
-  document.getElementById("closed-count").innerText = masterData.filter(
+  document.getElementById("count-closed").innerText = allIssuesData.filter(
     (i) => i.status === "closed",
   ).length;
 
-  dataList.forEach((item) => {
+  issues.forEach((item) => {
     const isOpen = item.status === "open";
-    const topBorder = isOpen ? "border-t-green-500" : "border-t-purple-600";
+    const borderCol = isOpen ? "border-t-green-500" : "border-t-purple-600";
 
     const card = document.createElement("div");
-    card.className = `bg-white border-t-4 ${topBorder} rounded-lg p-5 shadow-sm hover:shadow-lg transition-all cursor-pointer flex flex-col h-full border border-gray-100`;
+    card.className = `bg-white border-t-4 ${borderCol} rounded-lg p-5 shadow-sm hover:shadow-md cursor-pointer border-x border-b border-gray-100 flex flex-col h-full`;
 
-    card.onclick = () => getSingleIssue(item.id);
+    card.onclick = () => showDetails(item.id);
 
     card.innerHTML = `
-            <div class="flex justify-between items-center mb-3">
-                <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-[10px] font-black uppercase border border-blue-200">
-                    ${item.label}
+            <div class="flex justify-between items-center mb-4">
+                <span class="bg-blue-50 text-blue-600 text-[10px] font-black px-2 py-0.5 rounded border border-blue-100 uppercase">
+                    ${item.label || "No Label"}
                 </span>
-                <span class="${isOpen ? "text-green-600" : "text-purple-600"} text-[10px] font-bold uppercase flex items-center gap-1">
-                    ${isOpen ? "🟢 OPEN" : "🟣 CLOSED"}
+                <span class="text-[10px] font-bold ${isOpen ? "text-green-600" : "text-purple-600"} uppercase">
+                    ${isOpen ? "🟢 Open" : "🟣 Closed"}
                 </span>
             </div>
-            <h2 class="font-extrabold text-sm mb-2 text-gray-800 line-clamp-2 hover:text-blue-600 transition-colors">${item.title}</h2>
-            <p class="text-xs text-gray-500 mb-6 flex-grow line-clamp-3 leading-relaxed">${item.description}</p>
-            <div class="flex justify-between items-center pt-4 border-t border-gray-50 mt-auto">
+            <h3 class="font-bold text-sm text-gray-800 mb-2 line-clamp-1">${item.title}</h3>
+            <p class="text-xs text-gray-500 mb-6 flex-grow line-clamp-2">${item.description}</p>
+            <div class="flex justify-between items-center pt-3 border-t border-gray-50 mt-auto">
                 <div class="flex items-center gap-2">
-                    <div class="w-6 h-6 bg-gradient-to-tr from-blue-500 to-indigo-600 text-white rounded-full flex items-center justify-center text-[10px] font-black uppercase">${item.author[0]}</div>
-                    <span class="text-[11px] font-bold text-gray-700">${item.author}</span>
+                    <div class="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold uppercase">${item.author[0]}</div>
+                    <span class="text-[10px] font-bold text-gray-700">${item.author}</span>
                 </div>
-                <div class="flex flex-col items-end">
-                   <span class="text-[9px] bg-gray-100 px-2 py-0.5 rounded text-gray-500 font-bold uppercase tracking-tighter">${item.priority}</span>
-                   <span class="text-[8px] text-gray-300 mt-1">${item.createdAt.split("T")[0]}</span>
-                </div>
+                <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">${item.priority}</span>
             </div>
         `;
     container.appendChild(card);
   });
 }
 
-// Tab Change logic
-function changeTab(type, btn) {
-  const btns = document.querySelectorAll("#tab-group button");
-  btns.forEach((b) => {
+// Tab Filter
+function filterByStatus(status, btn) {
+  const buttons = document.querySelectorAll("#tab-btns button");
+  buttons.forEach((b) => {
     b.classList.remove("bg-gray-200", "font-bold", "border-gray-300");
     b.classList.add("btn-ghost", "text-gray-500", "border-none");
   });
   btn.classList.add("bg-gray-200", "font-bold", "border-gray-300");
   btn.classList.remove("btn-ghost", "text-gray-500", "border-none");
 
-  if (type === "all") renderData(masterData);
-  else renderData(masterData.filter((i) => i.status === type));
+  if (status === "all") displayIssues(allIssuesData);
+  else displayIssues(allIssuesData.filter((i) => i.status === status));
 }
 
-// Search Logic
+// Search Function
 async function handleSearch() {
-  const query = document.getElementById("search-box").value;
-  if (!query) return;
-
-  showLoader(true);
+  const q = document.getElementById("search-input").value;
+  if (!q) return;
+  toggleSpinner(true);
   const res = await fetch(
-    `https://phi-lab-server.vercel.app/api/v1/lab/issues/search?q=${query}`,
+    `https://phi-lab-server.vercel.app/api/v1/lab/issues/search?q=${q}`,
   );
   const data = await res.json();
-  renderData(data.data);
-  showLoader(false);
+  displayIssues(data.data);
+  toggleSpinner(false);
 }
 
-// Single Issue Details (Modal)
-async function getSingleIssue(id) {
+// Modal Details
+async function showDetails(id) {
   const res = await fetch(
     `https://phi-lab-server.vercel.app/api/v1/lab/issue/${id}`,
   );
-  const result = await res.json();
-  const issue = result.data;
+  const data = await res.json();
+  const issue = data.data;
 
-  const modalContent = document.getElementById("modal-body-content");
-  modalContent.innerHTML = `
-        <div class="flex items-center gap-2 mb-2">
-            <span class="bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded font-bold uppercase">${issue.label}</span>
-            <span class="text-xs text-gray-400 font-bold">#${issue.id}</span>
-        </div>
-        <h3 class="font-black text-2xl text-gray-800 mb-4">${issue.title}</h3>
-        <p class="text-gray-600 leading-relaxed text-sm p-4 bg-gray-50 rounded-lg border-l-4 border-gray-300 mb-6 italic">"${issue.description}"</p>
-        <div class="grid grid-cols-2 gap-y-4 gap-x-8 text-xs bg-white p-4 rounded-xl border border-gray-100">
-            <div><p class="text-gray-400 font-bold mb-1 uppercase">Reported By</p><p class="text-gray-800 font-black text-sm">${issue.author}</p></div>
-            <div><p class="text-gray-400 font-bold mb-1 uppercase">Priority Level</p><p class="text-orange-500 font-black text-sm uppercase">${issue.priority}</p></div>
-            <div><p class="text-gray-400 font-bold mb-1 uppercase">Status</p><p class="font-black text-sm uppercase">${issue.status}</p></div>
-            <div><p class="text-gray-400 font-bold mb-1 uppercase">Created On</p><p class="text-gray-800 font-black text-sm">${new Date(issue.createdAt).toLocaleDateString()}</p></div>
+  document.getElementById("modal-content").innerHTML = `
+        <span class="text-xs font-bold text-blue-600 uppercase mb-2 block">${issue.label}</span>
+        <h2 class="text-2xl font-black mb-4">${issue.title}</h2>
+        <p class="text-gray-500 text-sm mb-6 p-4 bg-gray-50 rounded border-l-4 border-gray-300 italic">"${issue.description}"</p>
+        <div class="grid grid-cols-2 gap-4 text-xs font-bold uppercase">
+            <div><p class="text-gray-400">Author</p><p>${issue.author}</p></div>
+            <div><p class="text-gray-400">Priority</p><p class="text-orange-500">${issue.priority}</p></div>
+            <div><p class="text-gray-400">Status</p><p>${issue.status}</p></div>
+            <div><p class="text-gray-400">Created At</p><p>${issue.createdAt.split("T")[0]}</p></div>
         </div>
     `;
   document.getElementById("details_modal").showModal();
 }
 
-function showLoader(is) {
-  const s = document.getElementById("spinner");
-  is ? s.classList.remove("hidden") : s.classList.add("hidden");
+function toggleSpinner(show) {
+  const l = document.getElementById("loading");
+  show ? l.classList.remove("hidden") : l.classList.add("hidden");
 }
