@@ -3,11 +3,40 @@ const handleLogin = () => {
   const pass = document.getElementById("user-pass").value;
 
   if (user === "admin" && pass === "admin123") {
-    document.getElementById("login-container").classList.add("hidden");
-    document.getElementById("dashboard-content").classList.remove("hidden");
+    Swal.fire({
+      title: "Success!",
+      text: "Login Successful",
+      icon: "success",
+      confirmButtonText: "Continue",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        document.getElementById("login-container").classList.add("hidden");
+        document.getElementById("dashboard-content").classList.remove("hidden");
+        loadAllData();
+      }
+    });
   } else {
-    alert("Invalid credentials! Use: admin / admin123");
+    Swal.fire({
+      title: "Error!",
+      text: "Invalid Credentials",
+      icon: "error",
+    });
   }
+};
+
+const loadAllData = async () => {
+  toggleSpinner(true);
+  try {
+    const res = await fetch(
+      "https://phi-lab-server.vercel.app/api/v1/lab/issues",
+    );
+    const data = await res.json();
+    allIssues = data.data;
+    displayIssues(allIssues);
+  } catch (err) {
+    console.error("Fetch error:", err);
+  }
+  toggleSpinner(false);
 };
 
 let allIssues = [];
