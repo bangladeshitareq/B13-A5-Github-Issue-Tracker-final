@@ -1,190 +1,134 @@
-// Global state to store fetched data
-let allIssues = [];
+let masterData = []; // Main array to store issues
 
-/**
- * Handle user login with admin credentials
- */
-const handleLogin = () => {
-  const userName = document.getElementById("user-name").value;
-  const userPass = document.getElementById("user-pass").value;
+// Function for Login
+function startLogin() {
+  const userValue = document.getElementById("input-user").value;
+  const passValue = document.getElementById("input-pass").value;
 
-  if (userName === "admin" && userPass === "admin123") {
-    // Professional popup notification using SweetAlert2
-    Swal.fire({
-      title: "Success!",
-      text: "Login Successful",
-      icon: "success",
-      confirmButtonText: "Continue",
-      confirmButtonColor: "#2DA44E", // GitHub green color
-      buttonsStyling: true,
-    }).then((result) => {
-      if (result.isConfirmed) {
-        // Switch view from login to dashboard
-        document.getElementById("login-container").classList.add("hidden");
-        document.getElementById("dashboard-content").classList.remove("hidden");
-        loadAllData();
-      }
-    });
+  if (userValue === "admin" && passValue === "admin123") {
+    alert("loging successfull"); // User requested specific browser alert
+    document.getElementById("login-section").classList.add("hidden");
+    document.getElementById("main-dashboard").classList.remove("hidden");
+    fetchIssues();
   } else {
-    Swal.fire({
-      title: "Error!",
-      text: "Invalid Username or Password",
-      icon: "error",
-      confirmButtonColor: "#d33",
-    });
+    alert("Login failed! Check your username/password.");
   }
-};
+}
 
-/**
- * Fetch all issues from the API
- */
-const loadAllData = async () => {
-  toggleSpinner(true);
+// Fetching all issues from API
+async function fetchIssues() {
+  showLoader(true);
   try {
     const response = await fetch(
       "https://phi-lab-server.vercel.app/api/v1/lab/issues",
     );
     const result = await response.json();
-    allIssues = result.data;
-    displayIssues(allIssues);
-  } catch (error) {
-    console.error("Data fetching failed:", error);
+    masterData = result.data;
+    renderData(masterData);
+  } catch (err) {
+    console.log("Error loading data", err);
   }
-  toggleSpinner(false);
-};
+  showLoader(false);
+}
 
-/**
- * Display issue cards in the UI
- * @param {Array} issues - List of issues to be rendered
- */
-const displayIssues = (issues) => {
-  const container = document.getElementById("issue-container");
+// Rendering cards on the UI
+function renderData(dataList) {
+  const container = document.getElementById("cards-list");
   container.innerHTML = "";
 
-  // Update Header Stats
-  document.getElementById("total-stat").innerText = `${issues.length} Issues`;
-  document.getElementById("open-stat").innerText = issues.filter(
+  // Stats Logic
+  document.getElementById("issue-total").innerText =
+    `${dataList.length} Issues Found`;
+  document.getElementById("open-count").innerText = masterData.filter(
     (i) => i.status === "open",
   ).length;
-  document.getElementById("closed-stat").innerText = issues.filter(
+  document.getElementById("closed-count").innerText = masterData.filter(
     (i) => i.status === "closed",
   ).length;
 
-  issues.forEach((issue) => {
-    // Logic for conditional top border based on status
-    const borderCol =
-      issue.status === "open" ? "border-t-green-500" : "border-t-purple-600";
-    const statusEmoji = issue.status === "open" ? "🟢" : "🟣";
+  dataList.forEach((item) => {
+    const isCurrentlyOpen = item.status === "open";
+    const topBorder = isCurrentlyOpen
+      ? "border-t-green-500"
+      : "border-t-purple-600";
 
-    const card = document.createElement("div");
-    card.className = `bg-white border-t-4 ${borderCol} rounded-md p-4 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col`;
+    const div = document.createElement("div");
+    div.className = `bg-white border-t-4 ${topBorder} rounded-md p-4 shadow-sm hover:shadow-md cursor-pointer flex flex-col h-full`;
 
-    // Modal trigger on card click (Requirement)
-    card.onclick = () => showIssueDetails(issue.id);
+    // On click show modal details
+    div.onclick = () => getSingleIssue(item.id);
 
-    card.innerHTML = `
-            <div class="flex justify-between items-start mb-2">
-                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-tight">${issue.label}</span>
-                <span class="text-[10px] font-bold ${issue.status === "open" ? "text-green-600" : "text-purple-600"}">
-                    ${statusEmoji} ${issue.status}
-                </span>
+    div.innerHTML = `
+            <div class="flex justify-between mb-2 uppercase text-[10px] font-bold text-gray-400">
+                <span>${item.label}</span>
+                <span class="${isCurrentlyOpen ? "text-green-600" : "text-purple-600"}">${isCurrentlyOpen ? "🟢" : "🟣"} ${item.status}</span>
             </div>
-            <h3 class="font-bold text-sm text-[#1F2328] mb-1 line-clamp-1">${issue.title}</h3>
-            <p class="text-xs text-gray-500 mb-4 line-clamp-2">${issue.description}</p>
-            <div class="flex justify-between items-center mt-auto pt-2 border-t border-gray-100">
+            <h2 class="font-bold text-sm mb-1 text-gray-800 line-clamp-1">${item.title}</h2>
+            <p class="text-xs text-gray-500 mb-4 flex-grow line-clamp-2">${item.description}</p>
+            <div class="flex justify-between items-center pt-2 border-t border-gray-100">
                 <div class="flex items-center gap-1">
-                    <div class="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-[10px] font-bold">
-                        ${issue.author[0]}
-                    </div>
-                    <span class="text-[10px] text-gray-600 font-medium">${issue.author}</span>
+                    <span class="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold uppercase">${item.author[0]}</span>
+                    <span class="text-[10px] font-semibold text-gray-700">${item.author}</span>
                 </div>
-                <span class="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-500 font-semibold">${issue.priority}</span>
+                <span class="text-[10px] italic text-gray-400 font-bold">${item.priority}</span>
             </div>
         `;
-    container.appendChild(card);
+    container.appendChild(div);
   });
-};
+}
 
-/**
- * Filter issues by status (All, Open, Closed)
- */
-const filterIssues = (status, btn) => {
-  // UI: Manage active button styles
-  const buttons = document.querySelectorAll(".btn-sm");
-  buttons.forEach((b) => {
+// Filter Tab Logic
+function changeTab(type, element) {
+  const allButtons = document.querySelectorAll("#tab-group button");
+  allButtons.forEach((b) => {
     b.classList.remove("bg-gray-200", "font-bold");
-    b.classList.add("text-gray-500");
+    b.classList.add("btn-ghost", "text-gray-500");
   });
-  btn.classList.add("bg-gray-200", "font-bold");
-  btn.classList.remove("text-gray-500");
+  element.classList.add("bg-gray-200", "font-bold");
+  element.classList.remove("btn-ghost", "text-gray-500");
 
-  // Logic: Filter the global issues list
-  if (status === "all") {
-    displayIssues(allIssues);
-  } else {
-    const filtered = allIssues.filter((issue) => issue.status === status);
-    displayIssues(filtered);
-  }
-};
+  if (type === "all") renderData(masterData);
+  else renderData(masterData.filter((x) => x.status === type));
+}
 
-/**
- * Search functionality via API
- */
-const searchIssues = async () => {
-  const query = document.getElementById("search-input").value;
-  if (!query) return;
+// Search Logic
+async function handleSearch() {
+  const text = document.getElementById("search-box").value;
+  if (!text) return;
 
-  toggleSpinner(true);
-  try {
-    const res = await fetch(
-      `https://phi-lab-server.vercel.app/api/v1/lab/issues/search?q=${query}`,
-    );
-    const data = await res.json();
-    displayIssues(data.data);
-  } catch (err) {
-    console.error("Search failed:", err);
-  }
-  toggleSpinner(false);
-};
+  showLoader(true);
+  const res = await fetch(
+    `https://phi-lab-server.vercel.app/api/v1/lab/issues/search?q=${text}`,
+  );
+  const result = await res.json();
+  renderData(result.data);
+  showLoader(false);
+}
 
-/**
- * Show Modal with issue details
- */
-const showIssueDetails = async (id) => {
-  try {
-    const res = await fetch(
-      `https://phi-lab-server.vercel.app/api/v1/lab/issue/${id}`,
-    );
-    const result = await res.json();
-    const item = result.data;
+// Modal Details Fetch
+async function getSingleIssue(id) {
+  const res = await fetch(
+    `https://phi-lab-server.vercel.app/api/v1/lab/issue/${id}`,
+  );
+  const result = await res.json();
+  const info = result.data;
 
-    // Custom SweetAlert2 modal to show details
-    Swal.fire({
-      title: item.title,
-      html: `
-                <div class="text-left mt-4">
-                    <p class="text-gray-600 text-sm mb-4">${item.description}</p>
-                    <hr class="my-2">
-                    <p class="text-xs"><strong>Author:</strong> ${item.author}</p>
-                    <p class="text-xs"><strong>Status:</strong> ${item.status}</p>
-                    <p class="text-xs"><strong>Priority:</strong> ${item.priority}</p>
-                    <p class="text-xs"><strong>Label:</strong> ${item.label}</p>
-                </div>
-            `,
-      confirmButtonText: "Close",
-      confirmButtonColor: "#0969DA",
-    });
-  } catch (error) {
-    console.error("Details fetch failed:", error);
-  }
-};
+  const modalContent = document.getElementById("modal-body-content");
+  modalContent.innerHTML = `
+        <h3 class="font-bold text-xl mb-4">${info.title}</h3>
+        <p class="text-gray-600 mb-4">${info.description}</p>
+        <hr class="mb-4">
+        <div class="grid grid-cols-2 gap-4 text-sm font-semibold">
+            <p>User: ${info.author}</p>
+            <p>Label: ${info.label}</p>
+            <p>Priority: ${info.priority}</p>
+            <p>Created: ${info.createdAt}</p>
+        </div>
+    `;
+  document.getElementById("details_modal").showModal();
+}
 
-/**
- * Utility to show/hide loading spinner
- */
-const toggleSpinner = (isLoading) => {
-  const spinner = document.getElementById("loading-spinner");
-  isLoading
-    ? spinner.classList.remove("hidden")
-    : spinner.classList.add("hidden");
-};
+function showLoader(status) {
+  const loader = document.getElementById("spinner");
+  status ? loader.classList.remove("hidden") : loader.classList.add("hidden");
+}
